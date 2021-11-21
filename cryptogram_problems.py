@@ -21,7 +21,7 @@ CANDIDATELIST = [] #array of strings
 COUNTER = -1
 
 def modifyPuzzle(string):
-    buffer = string.replace("-"," ")
+    buffer = string.replace("-"," ").replace(".","").replace(",","")
     stringList = buffer.split(" ")
     buffer = ""
     hSet = set()
@@ -65,9 +65,9 @@ vuol dire che A nel cipher text equivale ad M nel plain text
 [M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,A,B,C,D,E,F,G,H,I,J,K,L]
 """
 
-def isConsistent(map: list(), cipherText, plainText): #this controls if the MAP is correct
-    for i in range(len(cipherText)):
-        if not map[reverse_alpha_dict[cipherText[i]]] == plainText[i]:
+def isConsistent(map, cipherWord, plainText): #this controls if the MAP is correct
+    for i in range(len(cipherWord)):
+        if plainText[i] not in map[reverse_alpha_dict[cipherWord[i]]]:
             return False
     return True
         
@@ -78,29 +78,49 @@ def printMappings(map):
         
 def selfIntersection(map, string, hMap):
     t = len(string)-1
+    
     while t!=0:
         boh = len(string)-t-1
         cipherWord = string[boh]
-        newMap = [0]*26
-        for i in range(26):
-            newMap[i] = []
+        print("######################################")
+        print(cipherWord)
+        print("######################################")
+        newMap = [[]]*26
         candidateWords = CANDIDATELIST[boh]
         cipherLetter = [False] * 26
         i = FIRSTCAND[boh]
-        while candidateWords!=None and i<len(candidateWords):
+        g = []
+        while candidateWords!=[] and i<len(candidateWords):
             buffer = candidateWords[i].upper()
             if isConsistent(map,cipherWord, buffer):
-                for j in range(len(buffer)):
+                for j in range(len(cipherWord)):
                     cipherLetter[reverse_alpha_dict[cipherWord[j]]] = True
-                    newMap[reverse_alpha_dict[cipherWord[j]]] = buffer[j]
+# =============================================================================
+#                     if buffer[j] not in newMap[reverse_alpha_dict[cipherWord[j]]]:
+#                         print(alpha_dict[reverse_alpha_dict[cipherWord[j]]])
+# =============================================================================
+                    if buffer[j] not in g:
+                        g.append(buffer[j])
+                    #print(len(newMap[reverse_alpha_dict[cipherWord[j]]]))
+
             else:
+                print(candidateWords[FIRSTCAND[boh]], candidateWords[i])
                 candidateWords[FIRSTCAND[boh]],candidateWords[i] = candidateWords[i],candidateWords[FIRSTCAND[boh]]
                 FIRSTCAND[boh]+=1
             i+=1
+        for i in range(26):
+            if cipherLetter[i]:
+                newMap[i] = g
+        print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
+        print(newMap,len(newMap))
+        print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
+
         map = [newMap[k] for k in range(26) if cipherLetter[k]]
-        return map
+        t = t-1
+    return map
         
 def allCipherTextKnown(map):
+    empty = [[]]*26
     for i in range(26):
         if len(map[i])>1:
             return False
@@ -119,10 +139,10 @@ def printSolution(string, map):
 def solveRecursive(inputString, map, string, hMap, selectedWord):
     
     if allCipherTextKnown(map):
-        return printSolution(inputString, map)
+        printSolution(inputString, map)
     
     candidateWords = []
-    tmp = [0] * 26
+    tmp = [[]] * 26
     while not isSame(tmp,map):
         for i in range(26):
             tmp[i] = map[i]
@@ -155,7 +175,7 @@ def solveRecursive(inputString, map, string, hMap, selectedWord):
         for j in range(len(FIRSTCAND)):
             FIRSTCAND[j] = FIRSTCANDtmp[j]
     if not hasChild:
-        print("Partial Solution" + FIRSTCAND[selectedWord] + " " + len(CANDIDATELIST[selectedWord]))
+        print("Partial Solution: " + str(FIRSTCAND[selectedWord]) + " " + str(len(CANDIDATELIST[selectedWord])))
                     
 def planner(map):
     global COUNTER
@@ -163,21 +183,10 @@ def planner(map):
     return COUNTER
 
 
-# =============================================================================
-# hMap = dict()
-# test = "MU OJT PJTSK EWFFO XTMDWLSO, EWFFO OJTF ZITWS."
-# canonical = convertToCanonicalForm(test)
-# if canonical in hMap:
-#     hMap[canonical].append(test)
-# else:
-#     tmp = []
-#     tmp.append(test)
-#     hMap[canonical] = tmp
-# 
-# =============================================================================
 
-test = "MU OJT PJTSK EWFFO XTMDWLSO, EWFFO OJTF ZITWS."
 
+cipherText = "MUG NGJ KIX CGCXSL LG CGCXSL FP QJPL K PLGIN."
+plain = "Who you are moment to moment is just a story."
 hMap = dict()
 with open("usa.txt", "r") as file1:
     language = file1.read().splitlines()
@@ -192,10 +201,17 @@ for word in language:
         hMap[canonical] = tmp
 file1.close()
 
-cipherInputted = modifyPuzzle(test).split(" ")   
+cipherInputted = modifyPuzzle(cipherText).split(" ")   
 print(cipherInputted)
+
+print("_____________________________________________________")
+print("HMAP:")
+print(hMap)
+print("_____________________________________________________")
 CANDIDATELIST = [""]*len(cipherInputted)
+can = []
 for i in range(len(cipherInputted)):
+    can.append(convertToCanonicalForm(cipherInputted[i]))
     CANDIDATELIST[i] = hMap[convertToCanonicalForm(cipherInputted[i])]
     
 print(CANDIDATELIST)
@@ -204,16 +220,23 @@ print(CANDIDATELIST)
 map = [[]]*26
 
 for i in range(26):
-    if map[i] == 0 and alpha_dict[i] in test:
-        for j in range(26):
-            map[i].append(alpha_dict[j])
-
+    if map[i] == [] and alpha_dict[i] in cipherText:
+        map[i] = [letter for letter in string.ascii_uppercase]
+    elif alpha_dict[i] not in cipherText:
+        map[i] = []
+print("---------------------------------------------")
+print("map:")
+print(map)
+print("---------------------------------------------")
 FIRSTCAND = [0]*len(cipherInputted)
 
-solveRecursive(test, map, cipherInputted, hMap, 0)
+solveRecursive(cipherText, map, cipherInputted, hMap, 0)
 
 for i in range(len(cipherInputted)):
-    print(cipherInputted[i] + " " + (len(CANDIDATELIST) - FIRSTCAND[i]))
+    try:
+        print(cipherInputted[i] + " " + CANDIDATELIST[i][FIRSTCAND[i]] + " " + str(FIRSTCAND[i]))
+    except:
+        print(cipherInputted[i] + " " )
 
 
           
